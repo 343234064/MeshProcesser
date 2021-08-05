@@ -19,6 +19,10 @@
 #pragma comment(lib, "dxguid.lib")
 #endif
 
+#include "MeshProcesser.h"
+
+
+
 struct FrameContext
 {
     ID3D12CommandAllocator* CommandAllocator;
@@ -43,6 +47,8 @@ static IDXGISwapChain3* g_pSwapChain = NULL;
 static HANDLE                       g_hSwapChainWaitableObject = NULL;
 static ID3D12Resource* g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[NUM_BACK_BUFFERS] = {};
+
+static MeshProcesser gProcesser;
 
 
 bool CreateDeviceD3D(HWND hWnd);
@@ -301,7 +307,7 @@ void RenderEditorUI()
     window_flags |= ImGuiWindowFlags_NoResize;
     window_flags |= ImGuiWindowFlags_NoCollapse;
 
-    float window_height = 700;
+    float window_height = 450;
     float window_width = 600;
 
     ImGui::SetNextWindowPos(ImVec2(2, 3), ImGuiCond_FirstUseEver);
@@ -314,10 +320,13 @@ void RenderEditorUI()
     ImGui::Spacing();
     if (ImGui::Button("Load Mesh", ImVec2(150, 20)))
     {
-        
+        gProcesser.LoadMesh();
     }
     ImGui::Indent();
-    ImGui::Text("No mesh has loaded");
+    ImGui::Text(gProcesser.CurrentMeshPath.c_str());
+    ImGui::BulletText("Total Meshes Count: %d", gProcesser.CurrentMesh.GetTotalMeshesNum());
+    ImGui::BulletText("Total Vertices Count: %d", gProcesser.CurrentMesh.GetTotalVerticesNum());
+    ImGui::BulletText("Total Faces Count: %d", gProcesser.CurrentMesh.GetTotalFacesNum());
     ImGui::Unindent();
     ImGui::Spacing();
     ImGui::Spacing();
@@ -339,6 +348,7 @@ void RenderEditorUI()
 
     ImGui::BeginGroup();
     ImGui::BulletText("Adjacency");
+    ImGui::Spacing();
     ImGui::Indent();
     if (ImGui::Button("Generate Adjacency Data", ImVec2(200, 25)))
     {
@@ -353,7 +363,7 @@ void RenderEditorUI()
     ImGui::Text("Progress:");
     ImGui::SameLine();
     ImGui::TextColored(ImVec4(0, 1, 1, 1.0), "Nothing doing");
-    double Progress = 1.0;
+    float Progress = 1.0f;
     ImGui::ProgressBar(Progress, ImVec2(-1.0f, 0.0f));
     ImGui::Separator();
 
@@ -399,7 +409,8 @@ int main(int, char**)
         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
-    io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 15.0f);
+
+    io.Fonts->AddFontFromFileTTF("KozGoPro-Light.otf", 13.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
 
     // Our state
     bool show_demo_window = true;
