@@ -303,71 +303,106 @@ void RenderEditorUI()
     static float f = 0.0f;
     static int counter = 0;
 
-    ImGuiWindowFlags window_flags = 0;
-    window_flags |= ImGuiWindowFlags_NoResize;
-    window_flags |= ImGuiWindowFlags_NoCollapse;
-
-    float window_height = 450;
-    float window_width = 600;
-
-    ImGui::SetNextWindowPos(ImVec2(2, 3), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Setup", NULL, window_flags);        
-    ImGui::SetWindowSize(ImVec2(window_width, window_height));
-
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::Separator();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    if (ImGui::Button("Load Mesh", ImVec2(150, 20)))
     {
-        gProcesser.LoadMesh();
+        ImGuiWindowFlags window_flags = 0;
+        window_flags |= ImGuiWindowFlags_NoResize;
+        window_flags |= ImGuiWindowFlags_NoCollapse;
+
+        float window_height = 450;
+        float window_width = 500;
+
+        ImGui::Begin("Setup", NULL, window_flags);
+        ImGui::SetWindowPos(ImVec2(5, 5), ImGuiCond_FirstUseEver);
+        ImGui::SetWindowSize(ImVec2(window_width, window_height));
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        if (ImGui::Button("Load Mesh", ImVec2(150, 20)))
+        {
+            gProcesser.LoadMesh();
+        }
+        ImGui::Indent();
+        ImGui::Text(gProcesser.CurrentMeshPath.c_str());
+        ImGui::BulletText("Total Meshes Count: %d", gProcesser.CurrentMesh.GetTotalMeshesNum());
+        ImGui::BulletText("Total Vertices Count: %d", gProcesser.CurrentMesh.GetTotalVerticesNum());
+        ImGui::BulletText("Total Faces Count: %d", gProcesser.CurrentMesh.GetTotalFacesNum());
+        ImGui::Unindent();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Separator();
+
+        ImGui::BeginGroup();
+        ImGui::BulletText("Optimize Options");
+        bool temp;
+        ImGui::Indent();
+        ImGui::Checkbox("Vertex cache optimization", &temp);
+        ImGui::Checkbox("Overdraw optimization", &temp);
+        ImGui::Checkbox("Vertex fetch optimization", &temp);
+        ImGui::Checkbox("Vertex quantization", &temp);
+        ImGui::EndGroup();
+        ImGui::Separator();
+
+        ImGui::BeginGroup();
+        ImGui::BulletText("Adjacency");
+        ImGui::Spacing();
+        ImGui::Indent();
+        if (ImGui::Button("Generate Adjacency Data", ImVec2(200, 25)))
+        {
+
+        }
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::EndGroup();
+        ImGui::Separator();
+
+
+        ImGui::Text("Progress:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0, 1, 1, 1.0), "Nothing doing");
+        float Progress = 1.0f;
+        ImGui::ProgressBar(Progress, ImVec2(-1.0f, 0.0f));
+        ImGui::Separator();
+
+        ImGui::End();
     }
-    ImGui::Indent();
-    ImGui::Text(gProcesser.CurrentMeshPath.c_str());
-    ImGui::BulletText("Total Meshes Count: %d", gProcesser.CurrentMesh.GetTotalMeshesNum());
-    ImGui::BulletText("Total Vertices Count: %d", gProcesser.CurrentMesh.GetTotalVerticesNum());
-    ImGui::BulletText("Total Faces Count: %d", gProcesser.CurrentMesh.GetTotalFacesNum());
-    ImGui::Unindent();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::Separator();
-
-    ImGui::BeginGroup();
-    ImGui::BulletText("Optimize Options");
-    bool temp;
-    ImGui::Indent();
-    ImGui::Checkbox("Vertex cache optimization", &temp);
-    ImGui::Checkbox("Overdraw optimization", &temp);
-    ImGui::Checkbox("Vertex fetch optimization", &temp);
-    ImGui::Checkbox("Vertex quantization", &temp);
-    ImGui::EndGroup();
-    ImGui::Separator();
-
-    ImGui::BeginGroup();
-    ImGui::BulletText("Adjacency");
-    ImGui::Spacing();
-    ImGui::Indent();
-    if (ImGui::Button("Generate Adjacency Data", ImVec2(200, 25)))
+  
     {
+        float window_height = 600;
+        float window_width = 200;
 
+        ImGui::Begin("Mesh List");
+        ImGui::SetWindowPos(ImVec2(525, 2), ImGuiCond_FirstUseEver);
+        ImGui::SetWindowSize(ImVec2(window_width, window_height));
+
+        std::vector<Node>& NodeList = gProcesser.CurrentMesh.GetMeshList();
+        for (int i = 0; i < NodeList.size(); i++)
+        {
+            if (ImGui::TreeNode("Node")) {
+                Node& CurrentNode = NodeList[i];
+                for (int j = 0; j < CurrentNode.Meshes.size(); j++)
+                {
+                    Mesh& MeshObj = CurrentNode.Meshes[j];
+                    if (ImGui::TreeNode(MeshObj.Name.c_str()))
+                    {
+                        ImGui::Text("Vertices: %d", MeshObj.NumVertices);
+                        ImGui::Text("Faces: %d", MeshObj.NumFaces);
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::TreePop();
+            }
+
+        }
+
+        ImGui::End();
     }
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::EndGroup();
-    ImGui::Separator();
-
-
-    ImGui::Text("Progress:");
-    ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0, 1, 1, 1.0), "Nothing doing");
-    float Progress = 1.0f;
-    ImGui::ProgressBar(Progress, ImVec2(-1.0f, 0.0f));
-    ImGui::Separator();
-
-    ImGui::End();
+    
+    
 }
 
 // Main code

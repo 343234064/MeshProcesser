@@ -27,12 +27,18 @@ void MeshContainer::GatherMeshesList(aiNode* node, const aiScene* scene)
 	Node NewNode;
 	for (int i = 0; i < node->mNumMeshes; i++)
 	{
-		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		NewNode.Meshes.push_back(mesh);
+		aiMesh* MeshData = scene->mMeshes[node->mMeshes[i]];
+		
+		int NumMeshVertices = MeshData->mNumVertices;
+		int NumMeshFaces = MeshData->mNumFaces;
+		std::string MeshName = MeshData->mName.C_Str();
+
+		NewNode.Meshes.push_back(Mesh(MeshData, NumMeshVertices, NumMeshFaces, MeshName));
 		NumTotalMeshes++;
-		NumTotalVertices += mesh->mNumVertices;
-		NumTotalFaces += mesh->mNumFaces;
+		NumTotalVertices += NumMeshVertices;
+		NumTotalFaces += NumMeshFaces;
 	}
+	MeshList.push_back(NewNode);
 
 	for (int i = 0; i < node->mNumChildren; i++)
 	{

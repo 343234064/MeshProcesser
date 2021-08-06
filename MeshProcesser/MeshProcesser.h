@@ -22,6 +22,7 @@ public:
 public:
 	std::string CurrentMeshPath;
 	bool EnableVertexCacheOptimization;
+
 	MeshContainer CurrentMesh;
 
 

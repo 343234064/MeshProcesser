@@ -13,10 +13,24 @@ enum class MeshFileType
 	Fbx
 };
 
+struct Mesh
+{
+	Mesh(aiMesh* Data, int NumV, int NumF, std::string& Nme):
+		MeshData(Data),
+		NumVertices(NumV),
+		NumFaces(NumF),
+		Name(Nme)
+	{}
+
+	aiMesh* MeshData;
+	int NumVertices;
+	int NumFaces;
+	std::string Name;
+};
 
 struct Node
 {
-	std::vector<aiMesh*> Meshes;
+	std::vector<Mesh> Meshes;
 };
 
 class MeshContainer
@@ -47,6 +61,7 @@ public:
 	int GetTotalVerticesNum() { return NumTotalVertices; }
 	int GetTotalFacesNum() { return NumTotalFaces; }
 
+	std::vector<Node>& GetMeshList() { return MeshList; }
 
 protected:
 	void GatherMeshesList(aiNode* node, const aiScene* scene);
