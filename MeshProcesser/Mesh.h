@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include <assimp\scene.h>
 #include <assimp\Importer.hpp>
 #include <assimp\Exporter.hpp>
@@ -30,7 +31,9 @@ struct Mesh
 
 struct Node
 {
-	std::vector<Mesh> Meshes;
+	std::string Name;
+	std::vector<int> MeshIdx;
+	std::vector<std::unique_ptr<Node>> Childs;
 };
 
 class MeshContainer
@@ -38,17 +41,14 @@ class MeshContainer
 public:
 	MeshContainer(const aiScene* InitScene = nullptr) :
 		MeshScene(InitScene),
+		RootNode(nullptr),
 		NumTotalMeshes(0),
 		NumTotalVertices(0),
-		NumTotalFaces(0)
+		NumTotalFaces(0),
+		Loaded(false)
 	{}
 	~MeshContainer() {
-		/*
-			Objects of this class are generally maintained and owned by Assimp, not by the caller. 
-			You shouldn't want to instance it, nor should you ever try to delete a given scene on your own.
-		*/
-		MeshScene = nullptr;
-		MeshList.clear();
+		Clear();
 	}
 	MeshContainer(const MeshContainer&) = delete;
 
@@ -61,19 +61,28 @@ public:
 	int GetTotalVerticesNum() { return NumTotalVertices; }
 	int GetTotalFacesNum() { return NumTotalFaces; }
 
-	std::vector<Node>& GetMeshList() { return MeshList; }
+	std::unique_ptr<Node>& GetNodeList() { return RootNode; }
+	Mesh* GetMesh(int Idx) {
+		return &(MeshList[Idx]);
+	}
+	
+	void OptimizeVertexCache();
+	void OptimizeOverdraw();
 
 protected:
-	void GatherMeshesList(aiNode* node, const aiScene* scene);
+	Node* GatherNodeList(aiNode* node);
 
 protected:
 	const aiScene* MeshScene;
 	Assimp::Importer Importer;
 	Assimp::Importer Exporter;
 
-	std::vector<Node> MeshList;
+	std::unique_ptr<Node> RootNode;
+	std::vector<Mesh> MeshList;
 
 	int NumTotalMeshes;
 	int NumTotalVertices;
 	int NumTotalFaces;
+
+	bool Loaded;
 };

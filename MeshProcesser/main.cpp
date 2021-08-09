@@ -298,22 +298,49 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
+void GenerateMeshList(std::unique_ptr<Node>& CurrNode, int& TreeNodeId)
+{
+    
+    if (CurrNode == nullptr) return;
+
+    TreeNodeId++;
+    if (ImGui::TreeNode((void*)(intptr_t)TreeNodeId, CurrNode->Name.c_str())) {
+        for (int i = 0; i < CurrNode->MeshIdx.size(); i++)
+        {
+            TreeNodeId++;
+            Mesh* MeshObj = gProcesser.CurrentMesh.GetMesh(CurrNode->MeshIdx[i]);
+            if (ImGui::TreeNode((void*)(intptr_t)TreeNodeId, MeshObj->Name.c_str()))
+            {
+                ImGui::Text("Vertices: %d", MeshObj->NumVertices);
+                ImGui::Text("Faces: %d", MeshObj->NumFaces);
+                ImGui::TreePop();
+            }
+        }
+
+        for (int i = 0; i < CurrNode->Childs.size(); i++)
+        {
+            GenerateMeshList(CurrNode->Childs[i], TreeNodeId);
+        }
+        ImGui::TreePop();
+    }
+
+    
+}
+
 void RenderEditorUI()
 {
-    static float f = 0.0f;
-    static int counter = 0;
-
+    static int TreeNodeId = 0;
     {
-        ImGuiWindowFlags window_flags = 0;
-        window_flags |= ImGuiWindowFlags_NoResize;
-        window_flags |= ImGuiWindowFlags_NoCollapse;
+        ImGuiWindowFlags Window_flags = 0;
+        Window_flags |= ImGuiWindowFlags_NoResize;
+        Window_flags |= ImGuiWindowFlags_NoCollapse;
 
-        float window_height = 450;
-        float window_width = 500;
+        float Window_height = 450;
+        float Window_width = 500;
 
-        ImGui::Begin("Setup", NULL, window_flags);
+        ImGui::Begin("Setup", NULL, Window_flags);
         ImGui::SetWindowPos(ImVec2(5, 5), ImGuiCond_FirstUseEver);
-        ImGui::SetWindowSize(ImVec2(window_width, window_height));
+        ImGui::SetWindowSize(ImVec2(Window_width, Window_height));
 
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Separator();
@@ -327,7 +354,7 @@ void RenderEditorUI()
         ImGui::Text(gProcesser.CurrentMeshPath.c_str());
         ImGui::BulletText("Total Meshes Count: %d", gProcesser.CurrentMesh.GetTotalMeshesNum());
         ImGui::BulletText("Total Vertices Count: %d", gProcesser.CurrentMesh.GetTotalVerticesNum());
-        ImGui::BulletText("Total Faces Count: %d", gProcesser.CurrentMesh.GetTotalFacesNum());
+        ImGui::BulletText("Total Faces(Tri) Count: %d", gProcesser.CurrentMesh.GetTotalFacesNum());
         ImGui::Unindent();
         ImGui::Spacing();
         ImGui::Spacing();
@@ -338,10 +365,14 @@ void RenderEditorUI()
 
         ImGui::BeginGroup();
         ImGui::BulletText("Optimize Options");
-        bool temp;
         ImGui::Indent();
-        ImGui::Checkbox("Vertex cache optimization", &temp);
-        ImGui::Checkbox("Overdraw optimization", &temp);
+        if (ImGui::Button("Optimize Mesh", ImVec2(150, 20)))
+        {
+            gProcesser.OptimizeMesh();
+        }
+        bool temp;
+        ImGui::Checkbox("Vertex cache optimization", &gProcesser.EnableVertexCacheOptimization);
+        ImGui::Checkbox("Overdraw optimization", &gProcesser.EnableOverdrawOptimization);
         ImGui::Checkbox("Vertex fetch optimization", &temp);
         ImGui::Checkbox("Vertex quantization", &temp);
         ImGui::EndGroup();
@@ -353,7 +384,7 @@ void RenderEditorUI()
         ImGui::Indent();
         if (ImGui::Button("Generate Adjacency Data", ImVec2(200, 25)))
         {
-
+            gProcesser.AdjacencyData();
         }
         ImGui::Spacing();
         ImGui::Spacing();
@@ -372,32 +403,16 @@ void RenderEditorUI()
     }
   
     {
-        float window_height = 600;
-        float window_width = 200;
+        float Window_height = 600;
+        float Window_width = 200;
 
-        ImGui::Begin("Mesh List");
+        ImGui::Begin("Mesh List(By material)");
         ImGui::SetWindowPos(ImVec2(525, 2), ImGuiCond_FirstUseEver);
-        ImGui::SetWindowSize(ImVec2(window_width, window_height));
+        ImGui::SetWindowSize(ImVec2(Window_width, Window_height));
 
-        std::vector<Node>& NodeList = gProcesser.CurrentMesh.GetMeshList();
-        for (int i = 0; i < NodeList.size(); i++)
-        {
-            if (ImGui::TreeNode("Node")) {
-                Node& CurrentNode = NodeList[i];
-                for (int j = 0; j < CurrentNode.Meshes.size(); j++)
-                {
-                    Mesh& MeshObj = CurrentNode.Meshes[j];
-                    if (ImGui::TreeNode(MeshObj.Name.c_str()))
-                    {
-                        ImGui::Text("Vertices: %d", MeshObj.NumVertices);
-                        ImGui::Text("Faces: %d", MeshObj.NumFaces);
-                        ImGui::TreePop();
-                    }
-                }
-                ImGui::TreePop();
-            }
-
-        }
+        TreeNodeId = 0;
+        std::unique_ptr<Node>& NodeList = gProcesser.CurrentMesh.GetNodeList();
+        GenerateMeshList(NodeList, TreeNodeId);
 
         ImGui::End();
     }
@@ -477,7 +492,6 @@ int main(int, char**)
         ImGui::NewFrame();
 
         RenderEditorUI();
-
 
         ImGui::Render();
 

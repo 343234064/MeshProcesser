@@ -75,3 +75,20 @@ void MeshProcesser::LoadMesh()
 
 	return ;
 }
+
+
+void MeshProcesser::OptimizeMesh()
+{
+    if (EnableVertexCacheOptimization)
+        CurrentMesh.OptimizeVertexCache();
+
+    if (EnableOverdrawOptimization)
+        CurrentMesh.OptimizeOverdraw();
+
+}
+
+
+void MeshProcesser::AdjacencyData()
+{
+
+}
