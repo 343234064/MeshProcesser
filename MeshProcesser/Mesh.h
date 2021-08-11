@@ -52,8 +52,8 @@ public:
 	}
 	MeshContainer(const MeshContainer&) = delete;
 
-	bool LoadMesh(std::string filename);
-	bool SaveMesh(std::string filename, MeshFileType FileType);
+	bool LoadMesh(std::string Filename, char* ErrorString = nullptr, int StringLength = 0);
+	bool SaveMesh(std::string Filename, MeshFileType FileType, char* ErrorString = nullptr, int StringLength = 0);
 
 	void Clear();
 
@@ -61,21 +61,26 @@ public:
 	int GetTotalVerticesNum() { return NumTotalVertices; }
 	int GetTotalFacesNum() { return NumTotalFaces; }
 
+	bool IsLoaded() const { return Loaded; }
+
 	std::unique_ptr<Node>& GetNodeList() { return RootNode; }
 	Mesh* GetMesh(int Idx) {
 		return &(MeshList[Idx]);
 	}
 	
+
 	void OptimizeVertexCache();
 	void OptimizeOverdraw();
 
+
+
 protected:
-	Node* GatherNodeList(aiNode* node);
+	Node* GatherNodeList(aiNode* node, std::map<std::string, int>& NameMap);
 
 protected:
 	const aiScene* MeshScene;
 	Assimp::Importer Importer;
-	Assimp::Importer Exporter;
+	Assimp::Exporter Exporter;
 
 	std::unique_ptr<Node> RootNode;
 	std::vector<Mesh> MeshList;

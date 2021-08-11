@@ -1,22 +1,82 @@
 #include "Mesh.h"
-
+#include <iostream>
+#include <map>
 #include <assimp\postprocess.h>
 #include "meshoptimizer\meshoptimizer.h"
 
+void CheckNameExist(std::map<std::string, int>& NameMap, std::string& ToCheck)
+{
+	if (NameMap.count(ToCheck) == 0)
+	{
+		NameMap.insert(std::pair<std::string, int>(ToCheck, 1));
+	}
+	else
+	{
+		std::string NewName;
+		int NameCount = NameMap[ToCheck] + 1;
+		while (true)
+		{
+			NewName = ToCheck + "_" + std::to_string(NameCount);
+			if (NameMap.count(NewName) == 0)
+			{
+				break;
+			}
+			NameCount++;
+			if (NameCount >= 100)
+			{
+				break;
+			}
+		}
+		  
+		ToCheck = NewName;
+		NameMap[ToCheck] = NameCount;
+		NameMap.insert(std::pair<std::string, int>(ToCheck, 1));
+	}
+}
 
+Node* MeshContainer::GatherNodeList(aiNode* node, std::map<std::string, int>& NameMap)
+{
+	Node* NewNode = new Node();
+	NewNode->Name = node->mName.C_Str();
 
-bool MeshContainer::LoadMesh(std::string filename)
+	CheckNameExist(NameMap, NewNode->Name);
+
+	for (int i = 0; i < node->mNumMeshes; i++)
+	{
+		NewNode->MeshIdx.push_back(node->mMeshes[i]);
+	}
+
+	for (int i = 0; i < node->mNumChildren; i++)
+	{
+		Node* ChildNode = GatherNodeList(node->mChildren[i], NameMap);
+		NewNode->Childs.push_back(std::unique_ptr<Node>(ChildNode));
+	}
+
+	return NewNode;
+}
+
+bool MeshContainer::LoadMesh(std::string filename, char* ErrorString, int StringLength)
 {
 	const aiScene* pScene = Importer.ReadFile(filename,
 		aiProcess_Triangulate |
-		aiProcess_ConvertToLeftHanded);
+		aiProcess_ValidateDataStructure |
+		aiProcess_ImproveCacheLocality |
+		aiProcess_OptimizeMeshes |
+		aiProcess_RemoveRedundantMaterials
+	);
+
+	if (ErrorString != nullptr) {
+		const char* Message = Importer.GetErrorString();
+		sprintf_s(ErrorString, StringLength, Message);
+	}
 
 	if (pScene == NULL)
 		return false;
 
 	MeshScene = pScene;
 
-	Node* Root = GatherNodeList(MeshScene->mRootNode);
+	std::map<std::string, int> NameMap;
+	Node* Root = GatherNodeList(MeshScene->mRootNode, NameMap);
 	RootNode.reset(Root);
 
 
@@ -27,6 +87,8 @@ bool MeshContainer::LoadMesh(std::string filename)
 		int NumMeshVertices = MeshData->mNumVertices;
 		int NumMeshFaces = MeshData->mNumFaces;
 		std::string MeshName = MeshData->mName.C_Str();
+
+		CheckNameExist(NameMap, MeshName);
 
 		MeshList.push_back(Mesh(MeshData, NumMeshVertices, NumMeshFaces, MeshName));
 
@@ -40,25 +102,45 @@ bool MeshContainer::LoadMesh(std::string filename)
 	return true;
 }
 
-
-Node* MeshContainer::GatherNodeList(aiNode* node)
+bool MeshContainer::SaveMesh(std::string Filename, MeshFileType FileType, char* ErrorString, int StringLength)
 {
-	Node* NewNode = new Node();
-	NewNode->Name = node->mName.C_Str();
+	if (!Loaded) return true;
 
-	for (int i = 0; i < node->mNumMeshes; i++)
+	std::string FileTypeStr;
+	switch (FileType)
 	{
-		NewNode->MeshIdx.push_back(node->mMeshes[i]);
+	case MeshFileType::Obj:
+		FileTypeStr = "obj"; break;
+	case MeshFileType::Fbx:
+		FileTypeStr = "fbx"; break;
+	default:
+		FileTypeStr = "obj";
+		break;
 	}
 
-	for (int i = 0; i < node->mNumChildren; i++)
-	{
-		Node* ChildNode = GatherNodeList(node->mChildren[i]);
-		NewNode->Childs.push_back(std::unique_ptr<Node>(ChildNode));
+	aiReturn Result = Exporter.Export(MeshScene, FileTypeStr, Filename);
+	/*
+	int n = Exporter.GetExportFormatCount();
+	for (int i = 0; i < n; i++) {
+		const aiExportFormatDesc* formatDescription = Exporter.GetExportFormatDescription(i);
+		std::cout << formatDescription->description << std:: endl;
+		std::cout << formatDescription->fileExtension << std::endl;
+		std::cout << formatDescription->id << std::endl;
+		std::cout << "============================" << std::endl;
+	}*/
+	if (ErrorString != nullptr) {
+		const char* Message = Exporter.GetErrorString();
+		sprintf_s(ErrorString, StringLength, Message);
 	}
 
-	return NewNode;
+	if (Result != aiReturn::aiReturn_SUCCESS)
+	{
+		return false;
+	}
+
+	return true;
 }
+
 
 
 void MeshContainer::Clear()
@@ -70,7 +152,7 @@ void MeshContainer::Clear()
 	MeshScene = nullptr;
 
 	Importer.FreeScene();
-	Exporter.FreeScene();
+
 
 	RootNode.reset();
 	MeshList.clear();

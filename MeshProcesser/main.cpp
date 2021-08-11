@@ -335,7 +335,7 @@ void RenderEditorUI()
         Window_flags |= ImGuiWindowFlags_NoResize;
         Window_flags |= ImGuiWindowFlags_NoCollapse;
 
-        float Window_height = 450;
+        float Window_height = 700;
         float Window_width = 500;
 
         ImGui::Begin("Setup", NULL, Window_flags);
@@ -349,6 +349,11 @@ void RenderEditorUI()
         if (ImGui::Button("Load Mesh", ImVec2(150, 20)))
         {
             gProcesser.LoadMesh();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Save Mesh", ImVec2(150, 20)))
+        {
+            gProcesser.SaveMesh();
         }
         ImGui::Indent();
         ImGui::Text(gProcesser.CurrentMeshPath.c_str());
@@ -398,6 +403,10 @@ void RenderEditorUI()
         float Progress = 1.0f;
         ImGui::ProgressBar(Progress, ImVec2(-1.0f, 0.0f));
         ImGui::Separator();
+
+        int arraysize = IM_ARRAYSIZE(gProcesser.LogString);
+        strcpy_s(gProcesser.LogString, arraysize, gProcesser.Log.c_str());
+        ImGui::InputTextMultiline("LogText", gProcesser.LogString, gProcesser.Log.size(), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_ReadOnly);
 
         ImGui::End();
     }
